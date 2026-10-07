@@ -1,0 +1,27 @@
+# Build artifacts
+build/
+bin/
+*.o
+*.a
+*.so
+*.exe
+
+# Generated logs and temporary files
+*.log
+*.tmp
+*~
+__pycache__/
+*.pyc
+
+# Local editor settings
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+CMakeUserPresets.json
+
+# OS files
+.DS_Store
+Thumbs.db

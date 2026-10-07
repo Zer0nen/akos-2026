@@ -1,0 +1,4 @@
+cmake_minimum_required(VERSION 3.27)
+project(akos LANGUAGES C)
+include(CTest)
+add_subdirectory(IDZ/IDZ1)

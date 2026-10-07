@@ -1,0 +1,14 @@
+{
+  "cmake.useCMakePresets": "always",
+  "cmake.configureOnOpen": true,
+  "cmake.ctest.testExplorerIntegrationEnabled": true,
+  "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+  "cmake.debugConfig": {
+    "cwd": "${workspaceFolder}",
+    "args": [
+      "data/demo.txt"
+    ],
+    "MIMode": "gdb",
+    "miDebuggerPath": "/usr/bin/gdb"
+  }
+}

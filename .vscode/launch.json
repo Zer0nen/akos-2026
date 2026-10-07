@@ -1,0 +1,21 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Садовники: CMake / GDB",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${command:cmake.launchTargetPath}",
+      "args": [
+        "data/demo.txt"
+      ],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}/IDZ/IDZ1",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb",
+      "preLaunchTask": "CMake: build"
+    }
+  ]
+}

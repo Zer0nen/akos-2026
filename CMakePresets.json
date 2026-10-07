@@ -1,0 +1,4 @@
+{
+  "version": 6,
+  "include": ["IDZ/IDZ1/CMakePresets.json"]
+}
