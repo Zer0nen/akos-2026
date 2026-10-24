@@ -5,7 +5,7 @@
       "name": "Садовники: CMake / GDB",
       "type": "cppdbg",
       "request": "launch",
-      "program": "${command:cmake.launchTargetPath}",
+      "program": "${workspaceFolder}/build/cmake-debug/IDZ/IDZ1/gardeners",
       "args": [
         "data/demo.txt"
       ],
@@ -16,6 +16,30 @@
       "MIMode": "gdb",
       "miDebuggerPath": "/usr/bin/gdb",
       "preLaunchTask": "CMake: build"
+    },
+    {
+      "name": "ИДЗ2: семафоры",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/cmake-debug/IDZ/IDZ2/gardeners",
+      "args": ["data/demo.txt"],
+      "cwd": "${workspaceFolder}/IDZ/IDZ2",
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb",
+      "externalConsole": false,
+      "preLaunchTask": "CMake: build IDZ2"
+    },
+    {
+      "name": "ИДЗ2: условные переменные",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/cmake-debug/IDZ/IDZ2/gardeners_cond",
+      "args": ["data/demo.txt"],
+      "cwd": "${workspaceFolder}/IDZ/IDZ2",
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb",
+      "externalConsole": false,
+      "preLaunchTask": "CMake: build IDZ2"
     }
   ]
 }

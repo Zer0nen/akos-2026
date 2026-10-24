@@ -12,7 +12,9 @@
       "type": "cmake",
       "command": "build",
       "targets": [
-        "gardeners"
+        "gardeners",
+        "gardeners2_sem",
+        "gardeners2_cond"
       ],
       "dependsOn": "CMake: configure",
       "group": {
@@ -33,6 +35,14 @@
         "isDefault": true
       },
       "problemMatcher": []
+    },
+    {
+      "label": "CMake: build IDZ2",
+      "type": "cmake",
+      "command": "build",
+      "targets": ["gardeners2_sem", "gardeners2_cond"],
+      "dependsOn": "CMake: configure",
+      "problemMatcher": ["$gcc"]
     },
     {
       "label": "CMake: run demo",

@@ -1,0 +1,29 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "ИДЗ2: семафоры",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/cmake-debug/gardeners",
+      "args": ["data/demo.txt"],
+      "cwd": "${workspaceFolder}",
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb",
+      "externalConsole": false,
+      "preLaunchTask": "CMake: build"
+    },
+    {
+      "name": "ИДЗ2: условные переменные",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/cmake-debug/gardeners_cond",
+      "args": ["data/demo.txt"],
+      "cwd": "${workspaceFolder}",
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb",
+      "externalConsole": false,
+      "preLaunchTask": "CMake: build"
+    }
+  ]
+}
