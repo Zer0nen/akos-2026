@@ -25,7 +25,7 @@ endforeach()
 include(CTest)
 if(BUILD_TESTING)
     foreach(mode sem cond)
-        foreach(scenario demo rows blocked isolated two_cells waiting invalid interrupt)
+        foreach(scenario demo rows blocked isolated two_cells waiting invalid overflow interrupt)
             add_test(NAME idz2.${mode}.${scenario} COMMAND bash "${CMAKE_CURRENT_SOURCE_DIR}/tests/run_tests.sh"
                 "$<TARGET_FILE:gardeners2_${mode}>" ${scenario})
             set_tests_properties(idz2.${mode}.${scenario} PROPERTIES TIMEOUT 15)

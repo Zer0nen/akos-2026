@@ -1,6 +1,10 @@
 #include "garden.h"
+#include <ctype.h>
+#include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -29,6 +33,20 @@ static void mark_reachable(Garden *g, int id, int start) {
     }
 }
 
+/* Сначала проверяем число целиком, затем безопасно преобразуем его в int. */
+static bool read_int(FILE *file, int *result) {
+    char token[64], *end;
+    if (fscanf(file, "%63s", token) != 1) return false;
+    int next = fgetc(file);
+    if (next != EOF && !isspace((unsigned char)next)) return false;
+    errno = 0;
+    long value = strtol(token, &end, 10);
+    if (errno == ERANGE || end == token || *end != '\0' || value < INT_MIN || value > INT_MAX)
+        return false;
+    *result = (int)value;
+    return true;
+}
+
 int garden_load(Garden *g, Config *cfg, const char *path) {
     int fd = open(path, O_RDONLY);
     if (fd < 0) { perror("Входной файл"); return -1; }
@@ -37,9 +55,11 @@ int garden_load(Garden *g, Config *cfg, const char *path) {
     int r1, c1, r2, c2, detours;
     char route;
     memset(g, 0, sizeof *g);
-    if (fscanf(file, "%d %d %d %d %d %c %d %d %d %d %d %d",
-               &g->rows, &g->cols, &cfg->move[0], &cfg->move[1], &cfg->work,
-               &route, &detours, &r1, &c1, &r2, &c2, &cfg->unit_ms) != 12) goto invalid;
+    if (!read_int(file, &g->rows) || !read_int(file, &g->cols) ||
+        !read_int(file, &cfg->move[0]) || !read_int(file, &cfg->move[1]) ||
+        !read_int(file, &cfg->work) || fscanf(file, " %c", &route) != 1 ||
+        !read_int(file, &detours) || !read_int(file, &r1) || !read_int(file, &c1) ||
+        !read_int(file, &r2) || !read_int(file, &c2) || !read_int(file, &cfg->unit_ms)) goto invalid;
     if (g->rows < 1 || g->rows > MAX_SIDE || g->cols < 1 || g->cols > MAX_SIDE ||
         g->rows * g->cols < 2 || (route != 'C' && route != 'R') ||
         (detours != 0 && detours != 1) || cfg->unit_ms < 0 || cfg->unit_ms > 1000 ||

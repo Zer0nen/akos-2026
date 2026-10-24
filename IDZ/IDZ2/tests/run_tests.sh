@@ -30,7 +30,7 @@ run_case() {
     echo "$name: OK"
 }
 
-for name in demo rows blocked isolated two_cells waiting invalid interrupt; do
+for name in demo rows blocked isolated two_cells waiting invalid overflow interrupt; do
     [[ "$scenario" == all || "$scenario" == "$name" ]] || continue
     case "$name" in
         demo) run_case demo "$source_dir/data/demo.txt" 0 "обработано 43 из 43" ;;
@@ -56,6 +56,25 @@ for name in demo rows blocked isolated two_cells waiting invalid interrupt; do
             [[ "$code" -eq 1 ]]
             grep -Fq 'Некорректные параметры' "$temporary_dir/error.txt"
             echo 'invalid: OK'
+            ;;
+        overflow)
+            header=(1 2 1 2 2 C 1 0 0 0 1 0)
+            # Проверяем все числовые поля, включая числа за пределами long.
+            for field in 0 1 2 3 4 6 7 8 9 10 11; do
+                for value in 4294967297 -4294967295 9223372036854775808 99999999999999999999999999999999999999999999999999999999999999999999999999999999999999; do
+                    values=("${header[@]}")
+                    values[field]="$value"
+                    printf '%s ' "${values[@]}" > "$temporary_dir/overflow.txt"
+                    printf '\n..\n' >> "$temporary_dir/overflow.txt"
+                    code=0
+                    "$program" "$temporary_dir/overflow.txt" > /dev/null 2> "$temporary_dir/error.txt" || code=$?
+                    [[ "$code" -eq 1 ]] || {
+                        echo "Переполнение не отклонено: поле $field, значение $value, код $code"; exit 1;
+                    }
+                    grep -Fq 'Некорректные параметры' "$temporary_dir/error.txt"
+                done
+            done
+            echo 'overflow: OK'
             ;;
         interrupt)
             # Длинная обработка позволяет отправить сигнал до её завершения.
