@@ -14,7 +14,8 @@
       "targets": [
         "gardeners",
         "gardeners2_sem",
-        "gardeners2_cond"
+        "gardeners2_cond",
+        "gardeners_named", "gardeners_unnamed", "garden_server", "gardener"
       ],
       "dependsOn": "CMake: configure",
       "group": {

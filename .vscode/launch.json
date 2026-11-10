@@ -40,6 +40,22 @@
       "miDebuggerPath": "/usr/bin/gdb",
       "externalConsole": false,
       "preLaunchTask": "CMake: build IDZ2"
+    },
+    {
+      "name": "ИДЗ3: именованные семафоры",
+      "type": "cppdbg", "request": "launch",
+      "program": "${workspaceFolder}/build/cmake-debug/IDZ/IDZ3/gardeners_named",
+      "args": ["data/demo.txt"], "cwd": "${workspaceFolder}/IDZ/IDZ3",
+      "MIMode": "gdb", "miDebuggerPath": "/usr/bin/gdb",
+      "externalConsole": false, "preLaunchTask": "CMake: build"
+    },
+    {
+      "name": "ИДЗ3: неименованные семафоры",
+      "type": "cppdbg", "request": "launch",
+      "program": "${workspaceFolder}/build/cmake-debug/IDZ/IDZ3/gardeners_unnamed",
+      "args": ["data/demo.txt"], "cwd": "${workspaceFolder}/IDZ/IDZ3",
+      "MIMode": "gdb", "miDebuggerPath": "/usr/bin/gdb",
+      "externalConsole": false, "preLaunchTask": "CMake: build"
     }
   ]
 }

@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {"name": "ИДЗ3: именованные семафоры", "type": "cppdbg", "request": "launch",
+     "program": "${workspaceFolder}/build/cmake-debug/gardeners_named", "args": ["data/demo.txt"],
+     "cwd": "${workspaceFolder}", "MIMode": "gdb", "miDebuggerPath": "/usr/bin/gdb",
+     "externalConsole": false, "preLaunchTask": "CMake: build"},
+    {"name": "ИДЗ3: неименованные семафоры", "type": "cppdbg", "request": "launch",
+     "program": "${workspaceFolder}/build/cmake-debug/gardeners_unnamed", "args": ["data/demo.txt"],
+     "cwd": "${workspaceFolder}", "MIMode": "gdb", "miDebuggerPath": "/usr/bin/gdb",
+     "externalConsole": false, "preLaunchTask": "CMake: build"}
+  ]
+}
