@@ -54,6 +54,8 @@ typedef struct {
 
 extern volatile sig_atomic_t interrupted;
 int signals_init(void);
+bool process_alive(pid_t pid);
+bool state_valid(const State *s);
 int parse_int(const char *text, int *value);
 int load_garden(State *s, const char *file);
 void make_route(const State *s, int id, int route[CELLS]);
@@ -65,7 +67,7 @@ int ipc_open(Ipc *ipc, Mode mode, const char *session, const State *initial);
 int ipc_lock(Ipc *ipc);
 int ipc_unlock(Ipc *ipc);
 void ipc_notify(Ipc *ipc);
-int ipc_wait(Ipc *ipc, int id);           /* На входе и выходе блокировка захвачена. */
+int ipc_wait(Ipc *ipc, int id);           /* Вход под блокировкой; любой выход без неё. */
 void ipc_close(Ipc *ipc);
 int worker_run(Ipc *ipc, int id);
 

@@ -1,4 +1,5 @@
 #include "garden.h"
+#include <assert.h>
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -30,18 +31,25 @@ int ipc_lock(Ipc *ipc) {
         ssize_t size;
         do { size = mq_timedreceive(ipc->queue, (char *)&ipc->state, sizeof(State), NULL, &until); }
         while (size < 0 && errno == EINTR);
-        if (size != sizeof(State)) { sem_post(ipc->mutex); return -1; }
+        if (size != sizeof(State)) {
+            int saved = size < 0 ? errno : EPROTO;
+            sem_post(ipc->mutex); errno = saved;
+            return -1;
+        }
     } else ipc->state = ipc->memory->state;
     return 0;
 }
 int ipc_unlock(Ipc *ipc) {
-    int result = 0;
+    assert(state_valid(&ipc->state));
+    int result = 0, saved = 0;
     if (ipc->mode == QUEUE) {
         struct timespec until = deadline();
         do { result = mq_timedsend(ipc->queue, (char *)&ipc->state, sizeof(State), 0, &until); }
         while (result < 0 && errno == EINTR);
+        if (result < 0) saved = errno;
     } else ipc->memory->state = ipc->state;
-    if (sem_post(ipc->mutex) < 0) result = -1;
+    if (sem_post(ipc->mutex) < 0) { if (!saved) saved = errno; result = -1; }
+    if (saved) errno = saved;
     return result;
 }
 void ipc_notify(Ipc *ipc) {
@@ -62,12 +70,15 @@ int ipc_wait(Ipc *ipc, int id) {
         do { result = sem_timedwait(ipc->changed[id], &until); } while (result < 0 && errno == EINTR && !interrupted);
         int wait_error = result < 0 ? errno : 0;
         if (ipc_lock(ipc) < 0) return -1;
-        if (wait_error && wait_error != EINTR && wait_error != ETIMEDOUT) return -1;
-        if (kill(ipc->state.owner, 0) < 0 && errno == ESRCH) {
+        if (wait_error && wait_error != EINTR && wait_error != ETIMEDOUT) {
+            ipc_unlock(ipc); errno = wait_error;
+            return -1;
+        }
+        if (!process_alive(ipc->state.owner)) {
             ipc->state.failed = ipc->state.stopped = true; ipc_notify(ipc);
         }
     }
-    return 0;
+    return ipc_unlock(ipc);
 }
 
 int ipc_open(Ipc *ipc, Mode mode, const char *session, const State *initial) {
@@ -118,7 +129,7 @@ int ipc_open(Ipc *ipc, Mode mode, const char *session, const State *initial) {
         if (ipc_unlock(ipc) < 0) goto fail;  /* Публикуем готовое состояние и открываем доступ. */
     } else {
         if (ipc_lock(ipc) < 0) goto fail;
-        bool valid = ipc->state.magic == MAGIC && kill(ipc->state.owner, 0) == 0;
+        bool valid = ipc->state.magic == MAGIC && process_alive(ipc->state.owner);
         if (ipc_unlock(ipc) < 0) goto fail;
         if (!valid) { errno = EINVAL; goto fail; }
     }

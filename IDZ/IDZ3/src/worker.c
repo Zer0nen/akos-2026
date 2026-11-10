@@ -1,5 +1,4 @@
 #include "garden.h"
-#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -8,12 +7,19 @@
 
 /* Спим без общей блокировки. Короткие части позволяют быстро заметить остановку. */
 static int action_pause(Ipc *ipc, int units) {
-    int remaining = units * ipc->state.cfg.unit_ms;
-    while (remaining > 0 && !interrupted) {
-        int part = remaining < 20 ? remaining : 20;
-        struct timespec pause = {0, part * 1000000L};
-        while (nanosleep(&pause, &pause) < 0 && errno == EINTR && !interrupted) {}
-        remaining -= part;
+    struct timespec now;
+    if (clock_gettime(CLOCK_MONOTONIC, &now) < 0) return -1;
+    long long until = (long long)now.tv_sec * 1000000000LL + now.tv_nsec +
+                      (long long)units * ipc->state.cfg.unit_ms * 1000000LL;
+    while (!interrupted) {
+        if (clock_gettime(CLOCK_MONOTONIC, &now) < 0) return -1;
+        long long remaining = until - ((long long)now.tv_sec * 1000000000LL + now.tv_nsec);
+        if (remaining <= 0) break;
+        struct timespec pause = {0, remaining < 20000000L ? (long)remaining : 20000000L};
+        while (nanosleep(&pause, &pause) < 0) {
+            if (errno != EINTR) return -1;
+            if (interrupted) return 0;
+        }
         if (ipc_lock(ipc) < 0) return -1;
         bool stopped = ipc->state.stopped;
         if (ipc_unlock(ipc) < 0) return -1;
@@ -21,6 +27,40 @@ static int action_pause(Ipc *ipc, int units) {
     }
     return 0;
 }
+
+typedef struct {
+    Status kind;                         /* MOVING или PROCESSING. */
+    int target, units;
+} Action;
+
+static Action begin_action(Ipc *ipc, int id, int next) {
+    State *s = &ipc->state;
+    Actor *a = &s->actors[id];
+    a->status = next == a->position ? PROCESSING : MOVING;
+    if (a->status == PROCESSING)
+        event(ipc, id, "начал обработку (%d,%d)", next / s->cfg.cols, next % s->cfg.cols);
+    else {
+        a->destination = next;
+        event(ipc, id, "начал переход (%d,%d) -> (%d,%d)", a->position / s->cfg.cols,
+              a->position % s->cfg.cols, next / s->cfg.cols, next % s->cfg.cols);
+    }
+    return (Action){a->status, next, a->status == PROCESSING ? s->cfg.work : s->cfg.move[id]};
+}
+
+static void complete_action(Ipc *ipc, int id, Action action) {
+    State *s = &ipc->state;
+    Actor *a = &s->actors[id];
+    if (action.kind == PROCESSING) {
+        s->cells[action.target] = '+'; ++a->processed;
+        event(ipc, id, "закончил обработку (%d,%d)", action.target / s->cfg.cols, action.target % s->cfg.cols);
+    } else {
+        a->position = action.target; a->destination = -1;
+        event(ipc, id, "закончил переход в (%d,%d)", action.target / s->cfg.cols, action.target % s->cfg.cols);
+    }
+    a->status = READY;
+    ipc_notify(ipc);
+}
+
 int worker_run(Ipc *ipc, int id) {
     if (ipc_lock(ipc) < 0) return 1;
     State *s = &ipc->state;
@@ -43,7 +83,7 @@ int worker_run(Ipc *ipc, int id) {
     /* Первый участник ждёт подключения второго, далее оба действуют независимо. */
     while (!s->stopped && !interrupted && !s->actors[1 - id].pid) {
         a->status = WAITING;
-        if (ipc_wait(ipc, id) < 0) return 1;
+        if (ipc_wait(ipc, id) < 0 || ipc_lock(ipc) < 0) return 1;
     }
     if (!s->stopped) a->status = READY;
     while (!s->stopped && !interrupted) {
@@ -60,37 +100,20 @@ int worker_run(Ipc *ipc, int id) {
         }
         if (cursor == s->cfg.rows * s->cfg.cols) break;
         int target = route[cursor];
-        bool processing = a->position == target;
-        int next = processing ? target : next_step(s, id, target);
+        int next = a->position == target ? target : next_step(s, id, target);
         if (next == -1) {
             event(ipc, id, "ожидает путь к (%d,%d)", target / s->cfg.cols, target % s->cfg.cols);
             a->status = WAITING;
             Status other = s->actors[1 - id].status;
             if (other == WAITING || other == FINISHED) { s->result = 2; s->stopped = true; break; }
-            if (ipc_wait(ipc, id) < 0) return 1;
+            if (ipc_wait(ipc, id) < 0 || ipc_lock(ipc) < 0) return 1;
             continue;
         }
-        a->status = processing ? PROCESSING : MOVING;
-        if (processing) event(ipc, id, "начал обработку (%d,%d)", target / s->cfg.cols, target % s->cfg.cols);
-        else {
-            a->destination = next;
-            event(ipc, id, "начал переход (%d,%d) -> (%d,%d)", a->position / s->cfg.cols,
-                  a->position % s->cfg.cols, next / s->cfg.cols, next % s->cfg.cols);
-        }
-        int units = processing ? s->cfg.work : s->cfg.move[id];
-        if (ipc_unlock(ipc) < 0 || action_pause(ipc, units) < 0 || ipc_lock(ipc) < 0) return 1;
+        Action action = begin_action(ipc, id, next);
+        if (ipc_unlock(ipc) < 0 || action_pause(ipc, action.units) < 0 || ipc_lock(ipc) < 0) return 1;
         if (s->stopped || interrupted) break;
-        if (processing) {
-            assert(s->cells[a->position] == '.');
-            s->cells[a->position] = '+'; ++a->processed; ++cursor;
-            event(ipc, id, "закончил обработку (%d,%d)", target / s->cfg.cols, target % s->cfg.cols);
-        } else {
-            a->position = a->destination; a->destination = -1;
-            event(ipc, id, "закончил переход в (%d,%d)", next / s->cfg.cols, next % s->cfg.cols);
-        }
-        a->status = READY;
-        assert(a->position != s->actors[1 - id].position);
-        ipc_notify(ipc);
+        complete_action(ipc, id, action);
+        if (action.kind == PROCESSING) ++cursor;
     }
     if (interrupted) { s->stopped = true; s->result = 128 + interrupted; }
     a->position = a->destination = -1; a->status = FINISHED;

@@ -19,6 +19,58 @@ int signals_init(void) {
     return sigaction(SIGINT, &action, NULL) || sigaction(SIGTERM, &action, NULL) ? -1 : 0;
 }
 
+/* kill(pid, 0) видит и zombie. В Linux отличаем его по состоянию в /proc. */
+bool process_alive(pid_t pid) {
+    if (pid <= 0) return false;
+    char path[64], data[512];
+    snprintf(path, sizeof path, "/proc/%ld/stat", (long)pid);
+    int fd = open(path, O_RDONLY);
+    if (fd >= 0) {
+        ssize_t size = read(fd, data, sizeof data - 1);
+        close(fd);
+        if (size > 0) {
+            data[size] = '\0';
+            char *end = strrchr(data, ')');  /* Имя процесса само может содержать скобки. */
+            if (end && end[1] == ' ' && end[2])
+                return end[2] != 'Z' && end[2] != 'X' && end[2] != 'x';
+        }
+    }
+    /* Если /proc недоступен, не принимаем ошибку доступа за смерть процесса. */
+    return kill(pid, 0) == 0 || errno != ESRCH;
+}
+
+/* Проверяется перед публикацией состояния в отладочной сборке. */
+bool state_valid(const State *s) {
+    if (s->cfg.rows < 1 || s->cfg.rows > SIDE || s->cfg.cols < 1 || s->cfg.cols > SIDE) return false;
+    int count = s->cfg.rows * s->cfg.cols, processed = 0, finished = 0;
+    for (int cell = 0; cell < count; ++cell) {
+        if (s->cells[cell] != '.' && s->cells[cell] != '#' && s->cells[cell] != '+') return false;
+        processed += s->cells[cell] == '+';
+    }
+    for (int id = 0; id < 2; ++id) {
+        const Actor *a = &s->actors[id], *other = &s->actors[1 - id];
+        if (a->processed < 0 || a->status < READY || a->status > FINISHED) return false;
+        if (a->status == FINISHED) {
+            if (a->position != -1 || a->destination != -1) return false;
+            ++finished;
+            continue;
+        }
+        if (a->position < 0 || a->position >= count || s->cells[a->position] == '#' ||
+            a->position == other->position) return false;
+        if (a->status == PROCESSING && s->cells[a->position] != '.') return false;
+        if (a->status != MOVING) {
+            if (a->destination != -1) return false;
+            continue;
+        }
+        int next = a->destination, cols = s->cfg.cols;
+        if (next < 0 || next >= count || s->cells[next] == '#' || next == other->position ||
+            (other->status == MOVING && next == other->destination) ||
+            abs(next / cols - a->position / cols) + abs(next % cols - a->position % cols) != 1) return false;
+    }
+    return finished == s->finished && processed == s->actors[0].processed + s->actors[1].processed &&
+           processed <= s->reachable_count;
+}
+
 int parse_int(const char *text, int *value) {
     char *end;
     errno = 0;

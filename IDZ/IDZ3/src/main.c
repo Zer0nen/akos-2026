@@ -21,7 +21,7 @@ static void stop_children(pid_t pids[2], bool forked) {
         for (int id = 0; id < 2; ++id) {
             if (pids[id] <= 0) continue;
             if ((forked && waitpid(pids[id], NULL, WNOHANG) == pids[id]) ||
-                (!forked && kill(pids[id], 0) < 0 && errno == ESRCH)) pids[id] = 0;
+                (!forked && !process_alive(pids[id]))) pids[id] = 0;
             else alive = true;
         }
         if (!alive) return;
@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
             if (pids[id] <= 0) continue;
             int status = 0;
             bool gone = forked ? waitpid(pids[id], &status, WNOHANG) == pids[id] :
-                        kill(pids[id], 0) < 0 && errno == ESRCH;
+                        !process_alive(pids[id]);
             if (gone) {
                 if ((!s->stopped && s->actors[id].status != FINISHED) ||
                     (forked && (!WIFEXITED(status) || WEXITSTATUS(status))))
