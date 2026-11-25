@@ -1,0 +1,11 @@
+{
+  "version": 6,
+  "configurePresets": [{
+    "name": "debug", "displayName": "Linux: Debug", "generator": "Unix Makefiles",
+    "binaryDir": "${sourceDir}/build/cmake-debug",
+    "cacheVariables": {"CMAKE_BUILD_TYPE": "Debug", "CMAKE_C_COMPILER": "gcc",
+                       "BUILD_TESTING": "ON", "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"}
+  }],
+  "buildPresets": [{"name": "debug", "configurePreset": "debug", "jobs": 2}],
+  "testPresets": [{"name": "debug", "configurePreset": "debug", "output": {"outputOnFailure": true}}]
+}
