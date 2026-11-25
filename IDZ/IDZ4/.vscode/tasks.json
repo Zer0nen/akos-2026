@@ -1,0 +1,9 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {"label": "CMake: configure", "type": "cmake", "command": "configure", "problemMatcher": []},
+    {"label": "CMake: build", "type": "cmake", "command": "build",
+     "targets": ["garden4_server", "garden4_worker", "garden4_view"],
+     "dependsOn": "CMake: configure", "group": {"kind": "build", "isDefault": true}, "problemMatcher": ["$gcc"]}
+  ]
+}
